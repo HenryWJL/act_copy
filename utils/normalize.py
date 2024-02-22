@@ -1,6 +1,7 @@
 import torch
 import os
 import h5py
+from glob import glob
 
 import IPython
 e = IPython.embed
@@ -8,11 +9,11 @@ e = IPython.embed
 def get_norm_stats(args):
     all_qpos_data = []
     all_action_data = []
-    for episode_idx in range(args.num_episode):
-        dataset_path = os.path.join(args.dataset_dir, f'episode_{episode_idx}.hdf5')
-        with h5py.File(dataset_path, 'r') as root:
-            qpos = root['/observations/qpos'][()]
-            action = root['/action'][()]
+    file_paths = glob(os.path.join(args.dataset_dir, '*.hdf5'))
+    for path in file_paths:
+        with h5py.File(path, 'r') as f:
+            qpos = f['/observations/qpos'][()]
+            action = f['/action'][()]
         all_qpos_data.append(torch.from_numpy(qpos))
         all_action_data.append(torch.from_numpy(action))
     all_qpos_data = torch.stack(all_qpos_data)

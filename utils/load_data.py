@@ -10,88 +10,93 @@ import IPython
 e = IPython.embed
 
 
-class EpisodicDataset(Dataset):
-    def __init__(self, episode_ids, dataset_dir, camera_names, norm_stats):
-        super(EpisodicDataset).__init__()
-        self.episode_ids = episode_ids
-        self.dataset_dir = dataset_dir
-        self.camera_names = camera_names
+import numpy as np
+import torch
+import os
+from glob import glob
+import h5py
+from torch.utils.data import Dataset
+
+import IPython
+e = IPython.embed
+
+
+class ACTDataset(Dataset):
+    def __init__(self, args, norm_stats):
+        super().__init__()
+        self.num_queries = args.num_queries
+        self.dataset_dir = args.dataset_dir
+        self.camera_names = args.camera_names
         self.norm_stats = norm_stats
-        self.is_sim = None
-        self.__getitem__(0) # initialize self.is_sim
+        self.image_data, self.qpos_data, self.action_seq_data, self.is_pad_data = self.prepare_dataset()
+
+
+    def __getitem__(self, idx):
+        return self.image_data[idx], self.qpos_data[idx], self.action_data[idx], self.is_pad_data[idx]
+
 
     def __len__(self):
-        return len(self.episode_ids)
-
-    def __getitem__(self, index):
-        sample_full_episode = False # hardcode
-
-        episode_id = self.episode_ids[index]
-        dataset_path = os.path.join(self.dataset_dir, f'episode_{episode_id}.hdf5')
-        with h5py.File(dataset_path, 'r') as root:
-            is_sim = root.attrs['sim']
-            original_action_shape = root['/action'].shape
-            episode_len = original_action_shape[0]
-            if sample_full_episode:
-                start_ts = 0
-            else:
-                start_ts = np.random.choice(episode_len)
-            # get observation at start_ts only
-            qpos = root['/observations/qpos'][start_ts]
-            qvel = root['/observations/qvel'][start_ts]
-            image_dict = dict()
-            for cam_name in self.camera_names:
-                image_dict[cam_name] = root[f'/observations/images/{cam_name}'][start_ts]
-            # get all actions after and including start_ts
-            if is_sim:
-                action = root['/action'][start_ts:]
-                action_len = episode_len - start_ts
-            else:
-                action = root['/action'][max(0, start_ts - 1):] # hack, to make timesteps more aligned
-                action_len = episode_len - max(0, start_ts - 1) # hack, to make timesteps more aligned
-
-        self.is_sim = is_sim
-        padded_action = np.zeros(original_action_shape, dtype=np.float32)
-        padded_action[:action_len] = action
-        is_pad = np.zeros(episode_len)
-        is_pad[action_len:] = 1
-
-        # new axis for different cameras
-        all_cam_images = []
-        for cam_name in self.camera_names:
-            all_cam_images.append(image_dict[cam_name])
-        all_cam_images = np.stack(all_cam_images, axis=0)
-
-        # construct observations
-        image_data = torch.from_numpy(all_cam_images)
-        qpos_data = torch.from_numpy(qpos).float()
-        action_data = torch.from_numpy(padded_action).float()
-        is_pad = torch.from_numpy(is_pad).bool()
-
-        # channel last
-        image_data = torch.einsum('k h w c -> k c h w', image_data)
-
-        # normalize image and change dtype to float
-        image_data = image_data / 255.0
-        action_data = (action_data - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
-        qpos_data = (qpos_data - self.norm_stats["qpos_mean"]) / self.norm_stats["qpos_std"]
-
-        return image_data, qpos_data, action_data, is_pad
-
-
-def load_data(dataset_dir, num_episodes, camera_names, batch_size_train, batch_size_val):
+        return self.qpos_data.shape[0]
     
-    # obtain train test split
-    train_ratio = 0.8
-    shuffled_indices = np.random.permutation(num_episodes)
-    train_indices = shuffled_indices[:int(train_ratio * num_episodes)]
-    val_indices = shuffled_indices[int(train_ratio * num_episodes):]
+    
+    def prepare_dataset(self):
+        file_paths = os.path.join(self.dataset_dir, '*.hdf5')
+        file_paths = glob(file_paths)
+        total_image = []
+        total_qpos = []
+        total_action_seq = []
+        total_is_pad = []
+        for path in file_paths:
+            with h5py.File(path, 'r') as f:
+                action = f['/action'][()]  # (time_steps, action_dim)
+                qpos = f['/observations/qpos'][()]  # (time_steps, pos_dim)
+                images = []
+                for cam_name in self.camera_names:
+                    images.append(f[f'/observations/images/{cam_name}'][()])
+                image = np.stack(images, axis=1)  # (time_steps, num_camera, c, h, w)
+                time_steps = action[0]
+                # action sequence zero padding
+                zero_pad = np.zeros([self.num_queries - 1, action[1]], dtype=np.float32)
+                action = np.concatenate([action, zero_pad], axis=0)
+                is_pad = np.zeros(action[0])
+                is_pad[time_steps: ] = 1
+                # normalize pixel intensity to [0, 1]
+                image = image / 255.0
+                # normalize actions and joint positions
+                action = (action - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
+                qpos = (qpos - self.norm_stats["qpos_mean"]) / self.norm_stats["qpos_std"]
+                # transform nd.array to torch.tensor
+                image = torch.from_numpy(image)  
+                qpos = torch.from_numpy(qpos).float()
+                action = torch.from_numpy(action).float()
+                is_pad = torch.from_numpy(is_pad).bool()
+                ###============ ??? ============###
+                # channel last
+                image = torch.einsum('b k h w c -> b k c h w', image)
+                ###============ ??? ============###
+                
+                ### TODO we want the idx to be like [[0, 1, 2], [1, 2, 3], [2, 3, 4]]
+                idx = torch.arange(time_steps * self.num_queries).reshape(time_steps, self.num_queries)
+                action_seq = action[idx, :]  # (time_steps, num_queries, dim)
+                
+                total_image.append(image)
+                total_qpos.append(qpos)
+                total_action_seq.append(action_seq)
+                total_is_pad.append(is_pad)
+                
+        image_data = torch.cat(total_image, dim=0)
+        qpos_data = torch.cat(total_qpos, dim=0)
+        action_seq_data = torch.cat(total_action_seq, dim=0)
+        is_pad_data = torch.cat(total_is_pad, dim=0)
+        
+        return image_data, qpos_data, action_seq_data, is_pad_data
 
+
+def load_data(args):
     # obtain normalization stats for qpos and action
-    norm_stats = get_norm_stats(dataset_dir, num_episodes)
-
+    norm_stats = get_norm_stats(args)
     # Construct dataset and dataloader
-    dataset = EpisodicDataset(train_indices, dataset_dir, camera_names, norm_stats)
-    dataloader = DataLoader(dataset, batch_size=batch_size_train, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
+    dataset = ACTDataset(args, norm_stats)
+    dataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
    
     return dataloader, norm_stats

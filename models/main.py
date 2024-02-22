@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from .models import build_ACT_model
+from .cvae import build_ACT_model
 
 import IPython
 e = IPython.embed

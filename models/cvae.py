@@ -194,7 +194,7 @@ def build_encoder(args):
     return encoder
 
 
-def build(args):
+def build_ACT_model(args):
     """Build CVAE (DERTVAE)"""
     state_dim = 14  # in this work, state is the joint positions of two arms
     # Build CVAE encoder

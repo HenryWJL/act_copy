@@ -29,11 +29,11 @@ def get_sinusoid_encoding_table(n_position, d_hid):
     return torch.FloatTensor(sinusoid_table).unsqueeze(0)
 
 
-class DETRVAE(nn.Module):
+class ACT(nn.Module):
 
   
     def __init__(self, backbones, transformer, encoder, state_dim, num_queries, camera_names, vq, vq_class, vq_dim, action_dim):
-        """A variant of DETR VAE model
+        """ACT model, a variant of DERT VAE model
         Params:
         
             backbones: visual encoder backbone.
@@ -61,7 +61,7 @@ class DETRVAE(nn.Module):
         self.action_head = nn.Linear(hidden_dim, action_dim)
         self.is_pad_head = nn.Linear(hidden_dim, 1)  # ???
         
-        # CVAE encoder
+        # VAE encoder
         self.cls_embed = nn.Embedding(1, hidden_dim)  # extra [CLS] token embedding
         self.encoder_action_proj = nn.Linear(action_dim, hidden_dim) # project action sequence to embedding
         self.encoder_joint_proj = nn.Linear(state_dim, hidden_dim)  # project joint positions to embedding
@@ -75,7 +75,7 @@ class DETRVAE(nn.Module):
         """
         self.register_buffer('pos_table', get_sinusoid_encoding_table(1+1+num_queries, hidden_dim)) # [CLS], joint_pos, action_seq
         
-        # CVAE decoder
+        # VAE decoder
         self.input_proj_robot_state = nn.Linear(state_dim, hidden_dim)  # project joint positions to proprio embedding
         self.latent_out_proj = nn.Linear(self.latent_dim, hidden_dim)  # project latent z to latent embedding
         self.additional_pos_embed = nn.Embedding(2, hidden_dim)  # additional learned position embedding for proprio and latent embeddings
@@ -95,10 +95,10 @@ class DETRVAE(nn.Module):
             
             actions: action sequences (batch, seq, action_dim)
         """
-        ### CVAE encoder
+        ### VAE encoder
         latent_input, probs, binaries, mu, logvar = self.encode(qpos, actions, is_pad, vq_sample)
 
-        ### CVAE decoder
+        ### VAE decoder
         # Image observation features and their position embeddings
         all_cam_features = []
         all_cam_pos = []
@@ -177,7 +177,7 @@ class DETRVAE(nn.Module):
 
 
 def build_encoder(args):
-    """Build CVAE encoder"""
+    """Build VAE encoder"""
     d_model = args.hidden_dim # 256
     dropout = args.dropout # 0.1
     nhead = args.nheads # 8
@@ -195,9 +195,9 @@ def build_encoder(args):
 
 
 def build_ACT_model(args):
-    """Build CVAE (DERTVAE)"""
+    """Build ACT model"""
     state_dim = 14  # in this work, state is the joint positions of two arms
-    # Build CVAE encoder
+    # Build VAE encoder
     if args.no_encoder:
         encoder = None
     else:
@@ -207,10 +207,10 @@ def build_ACT_model(args):
     for _ in args.camera_names:
         backbone = build_backbone(args)
         backbones.append(backbone)
-    # Build CVAE decoder
+    # Build VAE decoder
     transformer = build_transformer(args)
     # Build the whole model
-    model = DETRVAE(
+    model = ACT(
         backbones,
         transformer,
         encoder,

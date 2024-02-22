@@ -18,7 +18,7 @@ def make_parser():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "--train_dir",
+        "--dataset_dir",
         default="",
         help="Directory used for loading training data."
     )

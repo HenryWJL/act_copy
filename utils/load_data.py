@@ -1,21 +1,11 @@
-import os
-import h5py
-import torch
-import numpy as np
-from torch.utils.data import Dataset, DataLoader
-
-from .normalize import get_norm_stats
-
-import IPython
-e = IPython.embed
-
-
 import numpy as np
 import torch
 import os
 from glob import glob
 import h5py
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
+
+from .normalize import get_norm_stats
 
 import IPython
 e = IPython.embed

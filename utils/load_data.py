@@ -1,3 +1,36 @@
+import os
+import torch
+import numpy as np
+from glob import glob
+from torch.utils.data import Dataset
+from pytorch3d.ops import knn_points, knn_gather
+
+from .acronym import load_mesh, load_grasps
+
+
+class Dataset(Dataset):
+    
+    
+    def __init__(self, args):
+        super().__init__()
+        
+        self.object_fname = glob(os.path.join(object_dir, mode, "**.h5"))
+        self.mesh_dir = os.path.join(mesh_dir, mode)
+        self.point_num = point_num
+    
+    
+    def __getitem__(self, key):
+        T, success = load_grasps(self.object_fname[key])
+        mesh = load_mesh(self.object_fname[key], mesh_root_dir=self.mesh_dir)
+        point_cloud = mesh.sample(self.point_num)
+        point_cloud = torch.from_numpy(point_cloud).float()
+        return point_cloud, T, success
+    
+    
+    def __len__(self):
+        return len(self.object_fname)
+
+
 def load_data(dataset_dir, num_episodes, camera_names, batch_size_train, batch_size_val):
     print(f'\nData from: {dataset_dir}\n')
     # obtain train test split

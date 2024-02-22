@@ -34,7 +34,7 @@ def make_parser():
 def train(args):
     device = torch.cuda(args.device)
     
-    train_dataloader = load_data(args)
+    train_dataloader, norm_stats = load_data(args)
     policy = ACTPolicy(args).to(device)
     optimizer = policy.configure_optimizers().to(device)
     

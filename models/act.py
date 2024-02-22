@@ -59,7 +59,6 @@ class ACT(nn.Module):
         self.state_dim, self.action_dim = state_dim, action_dim
         hidden_dim = transformer.d_model
         self.action_head = nn.Linear(hidden_dim, action_dim)
-        self.is_pad_head = nn.Linear(hidden_dim, 1)  # ???
         
         # VAE encoder
         self.cls_embed = nn.Embedding(1, hidden_dim)  # extra [CLS] token embedding
@@ -120,9 +119,8 @@ class ACT(nn.Module):
         hs = self.transformer(src, None, self.query_embed.weight, pos, latent_input, proprio_input, self.additional_pos_embed.weight)[0]
         
         a_hat = self.action_head(hs)
-        is_pad_hat = self.is_pad_head(hs)
         
-        return a_hat, is_pad_hat, [mu, logvar], probs, binaries
+        return a_hat, [mu, logvar], probs, binaries
     
     
     def encode(self, qpos, actions=None, is_pad=None, vq_sample=None):

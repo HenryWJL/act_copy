@@ -1,4 +1,2 @@
-from .cvae import build
+from .act import *
 
-def build_ACT_model(args):
-    return build(args)

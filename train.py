@@ -5,7 +5,7 @@ import tomli
 import torch
 from tqdm import tqdm
 
-from utils import load_data
+from utils import load_data, set_seed
 from policy import ACTPolicy
 
 import IPython
@@ -32,6 +32,7 @@ def make_parser():
 
 
 def train(args):
+    set_seed(args.seed)
     device = torch.cuda(args.device)
     
     train_dataloader, norm_stats = load_data(args)

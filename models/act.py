@@ -94,6 +94,8 @@ class ACT(nn.Module):
             env_state: environment's states (None)
             
             actions: action sequences (batch, seq, action_dim)
+
+            is_pad: a bool vector indicating which part of the action sequence is zero padded
         """
         ### VAE encoder
         latent_input, probs, binaries, mu, logvar = self.encode(qpos, actions, is_pad, vq_sample)

@@ -28,7 +28,7 @@ class ACTPolicy(nn.Module):
         
         ### Training
         if actions is not None:
-            a_hat, is_pad_hat, (mu, logvar), probs, binaries = self.model(qpos, image, None, actions, is_pad, vq_sample)
+            a_hat, (mu, logvar), probs, binaries = self.model(qpos, image, None, actions, is_pad, vq_sample)
 
             all_l1 = F.l1_loss(actions, a_hat, reduction='none')
             l1 = (all_l1 * ~is_pad.unsqueeze(-1)).mean()

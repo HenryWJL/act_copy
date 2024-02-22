@@ -1,8 +1,6 @@
-[backbone]
+[model]
 "backbone" = "resnet18"
 "lr_backbone" = 1e-5
-
-[act]
 "num_queries" = 100
 "hidden_dim" = 512
 "nheads" = 8
@@ -13,4 +11,8 @@
 [train]
 "kl_weight" = 10
 "lr" = 1e-5
+"batch" = 
+"epoch" = 2000
+"seed" = 
+"device" = 
 

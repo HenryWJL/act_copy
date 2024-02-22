@@ -1,0 +1,16 @@
+[backbone]
+"backbone" = "resnet18"
+"lr_backbone" = 1e-5
+
+[act]
+"num_queries" = 100
+"hidden_dim" = 512
+"nheads" = 8
+"dim_feedforward" = 3200
+"enc_layers" = 4
+"dec_layers" = 7
+
+[train]
+"kl_weight" = 10
+"lr" = 1e-5
+

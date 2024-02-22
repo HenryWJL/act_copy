@@ -194,8 +194,7 @@ def build_encoder(args):
     return encoder
 
 
-def build_ACT_model(args):
-    """Build ACT model"""
+def build_ACT_model_and_optimizer(args):
     state_dim = 14  # in this work, state is the joint positions of two arms
     # Build VAE encoder
     if args.no_encoder:
@@ -209,7 +208,7 @@ def build_ACT_model(args):
         backbones.append(backbone)
     # Build VAE decoder
     transformer = build_transformer(args)
-    # Build the whole model
+    # Build ACT model
     model = ACT(
         backbones,
         transformer,
@@ -224,5 +223,15 @@ def build_ACT_model(args):
     )
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print("number of parameters: %.2fM" % (n_parameters/1e6,))
+    # Build optimizer
+    param_dicts = [
+        {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
+        {
+            "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
+            "lr": args.lr_backbone,
+        },
+    ]
+    optimizer = torch.optim.AdamW(param_dicts, lr=args.lr,
+                                  weight_decay=args.weight_decay)
 
-    return model
+    return model, optimizer

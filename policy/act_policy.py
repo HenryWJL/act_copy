@@ -35,11 +35,9 @@ class ACTPolicy(nn.Module):
             all_l1 = F.l1_loss(actions, a_hat, reduction='none')
             l1 = (all_l1 * ~is_pad.unsqueeze(-1)).mean()
             total_kld, dim_wise_kld, mean_kld = kl_divergence(mu, logvar)
-            loss_dict['l1'] = l1
-            loss_dict['kl'] = total_kld[0]
-            loss_dict['loss'] = loss_dict['l1'] + loss_dict['kl'] * self.kl_weight
+            loss = l1 + total_kld[0] * self.kl_weight
             
-            return loss_dict
+            return loss
 
         ### Inference
         else:

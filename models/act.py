@@ -85,14 +85,12 @@ class ACT(nn.Module):
         self.query_embed = nn.Embedding(num_queries, hidden_dim)  # learned position embedding of Transformer decoder's query
         
         
-    def forward(self, qpos, image, env_state, actions=None, is_pad=None):
+    def forward(self, qpos, image, actions=None, is_pad=None):
         """
         Params:
             qpos: joint positions (batch, 14)
             
             image: image observations (batch, num_cam, channel, height, width)
-            
-            env_state: environment's states (None)
             
             actions: action sequences (batch, seq, action_dim)
 

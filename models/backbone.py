@@ -6,6 +6,7 @@ from torchvision.models._utils import IntermediateLayerGetter
 from typing import Dict, List
 from util.misc import NestedTensor, is_main_process
 from collections import OrderedDict
+
 from .position_encoding import build_position_encoding
 
 import IPython
@@ -114,8 +115,7 @@ class Joiner(nn.Sequential):
 def build_backbone(args):
     position_embedding = build_position_encoding(args)
     train_backbone = args.lr_backbone > 0
-    return_interm_layers = args.masks
-    backbone = Backbone(args.backbone, train_backbone, return_interm_layers, args.dilation)
+    backbone = Backbone(args.backbone, train_backbone, False, False)
     model = Joiner(backbone, position_embedding)
     model.num_channels = backbone.num_channels
   

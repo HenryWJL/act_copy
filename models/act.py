@@ -2,10 +2,10 @@ import torch
 from torch import nn
 from torch.autograd import Variable
 import torch.nn.functional as F
+import numpy as np
+
 from .backbone import build_backbone
 from .transformer import build_transformer, TransformerEncoder, TransformerEncoderLayer
-
-import numpy as np
 
 import IPython
 e = IPython.embed

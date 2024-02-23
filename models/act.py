@@ -32,7 +32,7 @@ def get_sinusoid_encoding_table(n_position, d_hid):
 class ACT(nn.Module):
 
   
-    def __init__(self, backbones, transformer, encoder, state_dim, num_queries, camera_names, vq, vq_class, vq_dim, action_dim):
+    def __init__(self, backbones, transformer, encoder, state_dim, action_dim, num_queries, latent_dim, camera_names):
         """ACT model, a variant of DERT VAE model
         Params:
         
@@ -43,20 +43,23 @@ class ACT(nn.Module):
             transformer: the decoder of CVAE (a Transformer architecture).
             
             state_dim: dimension of robot state (14: joint positions of two arms) 
-            
-            num_queries: length of action sequence
-            
+
             action_dim: dimension of action (14: joint positions of two arms)
             
-            aux_loss: True if auxiliary decoding losses (loss at each decoder layer) are to be used
+            num_queries: length of action sequence
+
+            latent dim: dimension of latent z's mu and logvar
+
+            camera_names: a list of camera names (str)
         """
         super().__init__()
         self.num_queries = num_queries
         self.camera_names = camera_names
         self.transformer = transformer
         self.encoder = encoder
-        self.vq, self.vq_class, self.vq_dim = vq, vq_class, vq_dim
-        self.state_dim, self.action_dim = state_dim, action_dim
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.latent_dim = latent_dim
         hidden_dim = transformer.d_model
         self.action_head = nn.Linear(hidden_dim, action_dim)
         
@@ -64,7 +67,6 @@ class ACT(nn.Module):
         self.cls_embed = nn.Embedding(1, hidden_dim)  # extra [CLS] token embedding
         self.encoder_action_proj = nn.Linear(action_dim, hidden_dim) # project action sequence to embedding
         self.encoder_joint_proj = nn.Linear(state_dim, hidden_dim)  # project joint positions to embedding
-        self.latent_dim = 32  # dimension of latent z's mu and logvar
         self.latent_proj = nn.Linear(hidden_dim, self.latent_dim * 2)  # project [CLS] output to latent z's mu and logvar
         """
         Get 1D sinusoid position embedding for encoder's inputs ([CLS] + joint_pos + action_seq)
@@ -83,7 +85,7 @@ class ACT(nn.Module):
         self.query_embed = nn.Embedding(num_queries, hidden_dim)  # learned position embedding of Transformer decoder's query
         
         
-    def forward(self, qpos, image, env_state, actions=None, is_pad=None, vq_sample=None):
+    def forward(self, qpos, image, env_state, actions=None, is_pad=None):
         """
         Params:
             qpos: joint positions (batch, 14)
@@ -97,7 +99,7 @@ class ACT(nn.Module):
             is_pad: a bool vector indicating which part of the action sequence is zero padded
         """
         ### VAE encoder
-        latent_input, probs, binaries, mu, logvar = self.encode(qpos, actions, is_pad, vq_sample)
+        latent_input, mu, logvar = self.encode(qpos, actions, is_pad)
 
         ### VAE decoder
         # Image observation features and their position embeddings
@@ -105,7 +107,7 @@ class ACT(nn.Module):
         all_cam_pos = []
         for cam_id, cam_name in enumerate(self.camera_names):
             features, pos = self.backbones[cam_id](image[:, cam_id])
-            # If "return_interm_layers" is set to True, the backbone will return features from intermediate layers
+            ### If "return_interm_layers" is set to True, the backbone will return features from intermediate layers
             features = features[0]  # take the feature from the last layer
             pos = pos[0]  # take the pos from the last layer
             all_cam_features.append(self.input_proj(features))
@@ -123,10 +125,9 @@ class ACT(nn.Module):
         return a_hat, [mu, logvar], probs, binaries
     
     
-    def encode(self, qpos, actions=None, is_pad=None, vq_sample=None):
+    def encode(self, qpos, actions=None, is_pad=None):
         """Obtain latent z and project it to embedding"""
         bs, _ = qpos.shape
-        probs = binaries = None
         
         ### Inference
         if self.encoder is None:
@@ -173,7 +174,7 @@ class ACT(nn.Module):
                 latent_sample = torch.zeros([bs, self.latent_dim], dtype=torch.float32).to(qpos.device)
                 latent_input = self.latent_out_proj(latent_sample)
 
-        return latent_input, probs, binaries, mu, logvar
+        return latent_input, mu, logvar
 
 
 def build_encoder(args):
@@ -195,7 +196,6 @@ def build_encoder(args):
 
 
 def build_ACT_model_and_optimizer(args):
-    state_dim = 14  # in this work, state is the joint positions of two arms
     # Build VAE encoder
     if args.no_encoder:
         encoder = None
@@ -213,13 +213,11 @@ def build_ACT_model_and_optimizer(args):
         backbones,
         transformer,
         encoder,
-        state_dim=state_dim,
+        state_dim=args.state_dim,
+        action_dim=args.action_dim
         num_queries=args.num_queries,
-        camera_names=args.camera_names,
-        vq=args.vq,
-        vq_class=args.vq_class,
-        vq_dim=args.vq_dim,
-        action_dim=args.action_dim,
+        latent_dim = args.latent_dim
+        camera_names=args.camera_names
     )
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print("number of parameters: %.2fM" % (n_parameters/1e6,))

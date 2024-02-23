@@ -23,5 +23,5 @@
 "seed" = 42
 "device" = 0
 
-[IO]
+[io]
 "camera_names" = []

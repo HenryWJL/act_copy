@@ -1,7 +1,7 @@
 [model]
 "backbone" = "resnet18"
 "lr_backbone" = 1e-5
-"no_encoder" = False
+"no_encoder" = 0
 "state_dim" = 14
 "action_dim" = 14
 "num_queries" = 100
@@ -12,16 +12,16 @@
 "enc_layers" = 4
 "dec_layers" = 7
 "dropout" = 0.1
-"pre_norm" = False
+"pre_norm" = 0
 
 [train]
 "kl_weight" = 10
 "lr" = 1e-4
 "weight_decay" = 1e-4
-"batch" = 128
+"batch" = 100
 "epoch" = 2000
 "seed" = 42
-"device" = 0
+"device" = "cpu"
 
 [io]
-"camera_names" = []
+"camera_names" = ['cam_high', 'cam_left_wrist', 'cam_right_wrist']

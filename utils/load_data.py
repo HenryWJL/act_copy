@@ -1,4 +1,5 @@
 import os
+import cv2
 import h5py
 import torch
 import numpy as np
@@ -39,34 +40,37 @@ class ACTDataset(Dataset):
         for path in file_paths:
             with h5py.File(path, 'r') as f:
                 action = f['/action'][()]  # (time_steps, action_dim)
+                time_steps = action.shape[0]
                 qpos = f['/observations/qpos'][()]  # (time_steps, pos_dim)
                 images = []
                 for cam_name in self.camera_names:
                     images.append(f[f'/observations/images/{cam_name}'][()])
-                image = np.stack(images, axis=1)  # (time_steps, num_camera, c, h, w)
-                time_steps = action[0]
-                # action sequence zero padding
-                zero_pad = np.zeros([self.num_queries - 1, action[1]], dtype=np.float32)
-                action = np.concatenate([action, zero_pad], axis=0)
-                is_pad = np.zeros(action[0])
-                is_pad[time_steps: ] = 1
-                # normalize pixel intensity to [0, 1]
+                # decoder images (if necessary)
+                for idx, image in enumerate(images):
+                    images_decode = []
+                    for i in range(image.shape[0]):
+                        image_decode = cv2.imdecode(image[i], 1)
+                        images_decode.append(image_decode)
+                    images[idx] = np.stack(images_decode, axis=0)        
+                # normalize images pixel intensity to [0, 1] (if necessary)
                 image = image / 255.0
+                # concatenate images
+                image = np.stack(images, axis=1)  # (time_steps, num_camera, h, w, c)
                 # normalize actions and joint positions
-                action = (action - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
-                qpos = (qpos - self.norm_stats["qpos_mean"]) / self.norm_stats["qpos_std"]
+                action = ((action - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]).squeeze()
+                qpos = ((qpos - self.norm_stats["qpos_mean"]) / self.norm_stats["qpos_std"]).squeeze()
+                # action sequence zero padding
+                zero_pad = np.zeros((self.num_queries - 1, action.shape[1]), dtype=np.float32)
+                action = np.concatenate([action, zero_pad], axis=0)
+                is_pad = np.zeros(action.shape[0])
+                is_pad[time_steps: ] = 1
                 # transform nd.array to torch.tensor
-                image = torch.from_numpy(image)  
+                image = torch.from_numpy(image).permute(0, 1, 4, 2, 3)  # (time_steps, num_camera, c, h, w)
                 qpos = torch.from_numpy(qpos).float()
                 action = torch.from_numpy(action).float()
                 is_pad = torch.from_numpy(is_pad).bool()
-                ###============ ??? ============###
-                # channel last
-                image = torch.einsum('b k h w c -> b k c h w', image)
-                ###============ ??? ============###
-                
-                ### TODO we want the idx to be like [[0, 1, 2], [1, 2, 3], [2, 3, 4]]
-                idx = torch.arange(time_steps * self.num_queries).reshape(time_steps, self.num_queries)
+                ### TODO we want the idx to be like [[0, 1, 2...seq-1], [1, 2, 3...seq], [2, 3, 4...seq+1]] (step, seq)
+                idx = torch.randint(2, (time_steps, self.num_queries))
                 action_seq = action[idx, :]  # (time_steps, num_queries, dim)
                 
                 total_image.append(image)

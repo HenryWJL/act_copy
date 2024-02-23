@@ -19,11 +19,13 @@ def make_parser():
     )
     parser.add_argument(
         "--dataset_dir",
+        type=str,
         default="",
         help="Directory used for loading training data."
     )
     parser.add_argument(
         "--ckpt_dir",
+        type=str,
         default="",
         help="Directory used for saving models."
     )
@@ -33,12 +35,12 @@ def make_parser():
 
 def train(args):
     set_seed(args.seed)
-    device = torch.cuda(args.device)
+    device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
     
     train_dataloader, norm_stats = load_data(args)
     policy = ACTPolicy(args).to(device)
     optimizer = policy.configure_optimizers().to(device)
-    
+    print("Training")
     for epoch in tqdm(range(args.epoch)):
         policy.train()
         optimizer.zero_grad()
@@ -48,6 +50,7 @@ def train(args):
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
+            print(loss)
 
         if (epoch + 1) % 100 == 0:
             ckpt_path = os.path.join(args.ckpt_dir, f'epoch_{epoch + 1}_seed_{args.seed}.ckpt')
@@ -73,7 +76,7 @@ def main(argv=sys.argv[1:]):
         args.nheads = int(_config['model']['nheads'])
         args.dim_feedforward = int(_config['model']['dim_feedforward'])
         args.enc_layers = int(_config['model']['enc_layers'])
-        args.enc_layers = int(_config['model']['enc_layers'])
+        args.dec_layers = int(_config['model']['enc_layers'])
         args.dropout = float(_config['model']['dropout'])
         args.pre_norm = bool(_config['model']['pre_norm'])
         
@@ -88,3 +91,7 @@ def main(argv=sys.argv[1:]):
         args.camera_names = list(_config['io']['camera_names'])
         
     train(args)
+
+
+if __name__ == '__main__':
+    main()

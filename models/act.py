@@ -177,12 +177,12 @@ class ACT(nn.Module):
 
 def build_encoder(args):
     """Build VAE encoder"""
-    d_model = args.hidden_dim # 256
-    dropout = args.dropout # 0.1
-    nhead = args.nheads # 8
-    dim_feedforward = args.dim_feedforward # 2048
-    num_encoder_layers = args.enc_layers # 4 # TODO shared with VAE decoder
-    normalize_before = args.pre_norm # False
+    d_model = args.hidden_dim
+    dropout = args.dropout
+    nhead = args.nheads
+    dim_feedforward = args.dim_feedforward
+    num_encoder_layers = args.enc_layers
+    normalize_before = args.pre_norm
     activation = "relu"
 
     encoder_layer = TransformerEncoderLayer(d_model, nhead, dim_feedforward,

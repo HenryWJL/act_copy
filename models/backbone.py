@@ -3,6 +3,7 @@ import torchvision
 from torch import nn
 from torch import Tensor
 from torchvision.models._utils import IntermediateLayerGetter
+from torchvision.models import ResNet18_Weights
 from typing import Optional, List
 
 from .position_encoding import build_position_encoding
@@ -104,7 +105,7 @@ class Backbone(BackboneBase):
                  dilation: bool):
         backbone = getattr(torchvision.models, name)(
             replace_stride_with_dilation=[False, False, dilation],
-            pretrained=True, norm_layer=FrozenBatchNorm2d)
+            weights=ResNet18_Weights.DEFAULT, norm_layer=FrozenBatchNorm2d)
         num_channels = 512 if name in ('resnet18', 'resnet34') else 2048
         super().__init__(backbone, train_backbone, num_channels, return_interm_layers)
 

@@ -208,7 +208,7 @@ def build_ACT_model_and_optimizer(args):
     transformer = build_transformer(args)
     # Build ACT model
     model = ACT(
-        backbones==backbones,
+        backbones=backbones,
         transformer=transformer,
         encoder=encoder,
         state_dim=args.state_dim,

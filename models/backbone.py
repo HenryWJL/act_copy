@@ -109,13 +109,11 @@ class Backbone(BackboneBase):
         super().__init__(backbone, num_channels, return_interm_layers)
 
 
-class Joiner(nn.Module):
+class Joiner(nn.Sequential):
     """Visual encoder backbone + 2D positional encoding"""
   
     def __init__(self, backbone, position_embedding):
-        super().__init__()
-        self.backbone = backbone
-        self.position_embedding = position_embedding
+        super().__init__(backbone, position_embedding)
 
   
     def forward(self, tensor_list: NestedTensor):
@@ -126,13 +124,12 @@ class Joiner(nn.Module):
 
             pos: the position embeddings of the outputs (a list)
         """
-        xs = self.backbone(tensor_list)
+        xs = self[0](tensor_list)  # self[0]: backbone
         out: List[NestedTensor] = []
         pos = []
         for _, x in xs.items():
             out.append(x)
-            # position encoding
-            pos.append(self.position_embedding(x).to(x.dtype))
+            pos.append(self[1](x).to(x.dtype))  # self[1]: positional encoding
 
         return out, pos
 

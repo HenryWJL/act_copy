@@ -64,18 +64,27 @@ def main(argv=sys.argv[1:]):
         
         args.backbone = str(_config['model']['backbone'])
         args.lr_backbone = float(_config['model']['lr_backbone'])
+        args.no_encoder = bool(_config['model']['no_encoder'])
+        args.state_dim = int(_config['model']['state_dim'])
+        args.action_dim = int(_config['model']['action_dim'])
         args.num_queries = int(_config['model']['num_queries'])
+        args.latent_dim = int(_config['model']['latent_dim'])
         args.hidden_dim = int(_config['model']['hidden_dim'])
         args.nheads = int(_config['model']['nheads'])
         args.dim_feedforward = int(_config['model']['dim_feedforward'])
         args.enc_layers = int(_config['model']['enc_layers'])
         args.enc_layers = int(_config['model']['enc_layers'])
+        args.dropout = float(_config['model']['dropout'])
+        args.pre_norm = bool(_config['model']['pre_norm'])
         
         args.kl_weight = float(_config['train']['kl_weight'])
         args.lr = float(_config['train']['lr'])
+        args.weight_decay = float(_config['train']['weight_decay'])
         args.batch = int(_config['train']['batch'])
         args.epoch = int(_config['train']['epoch'])
         args.seed = int(_config['train']['seed'])
         args.device = str(_config['train']['device'])
+
+        args.camera_names = list(_config['io']['camera_names'])
         
     train(args)

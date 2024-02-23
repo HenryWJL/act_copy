@@ -19,7 +19,7 @@ class ACTPolicy(nn.Module):
         self.kl_weight = args.kl_weight
         
 
-    def __call__(self, qpos, image, actions=None, is_pad=None, vq_sample=None):
+    def __call__(self, qpos, image, actions=None, is_pad=None):
         ###============ ??? ============###
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                          std=[0.229, 0.224, 0.225])
@@ -28,7 +28,7 @@ class ACTPolicy(nn.Module):
         
         ### Training
         if actions is not None:
-            a_hat, (mu, logvar), probs, binaries = self.model(qpos, image, None, actions, is_pad, vq_sample)
+            a_hat, (mu, logvar) = self.model(qpos, image, actions, is_pad)
 
             all_l1 = F.l1_loss(actions, a_hat, reduction='none')
             l1 = (all_l1 * ~is_pad.unsqueeze(-1)).mean()
@@ -39,7 +39,7 @@ class ACTPolicy(nn.Module):
 
         ### Inference
         else:
-            a_hat, _, (_, _), _, _ = self.model(qpos, image, None, vq_sample=vq_sample)
+            a_hat, (_, _) = self.model(qpos, image)
             
             return a_hat
 

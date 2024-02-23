@@ -208,13 +208,13 @@ def build_ACT_model_and_optimizer(args):
     transformer = build_transformer(args)
     # Build ACT model
     model = ACT(
-        backbones,
-        transformer,
-        encoder,
+        backbones==backbones,
+        transformer=transformer,
+        encoder=encoder,
         state_dim=args.state_dim,
-        action_dim=args.action_dim
+        action_dim=args.action_dim,
         num_queries=args.num_queries,
-        latent_dim = args.latent_dim
+        latent_dim = args.latent_dim,
         camera_names=args.camera_names
     )
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)

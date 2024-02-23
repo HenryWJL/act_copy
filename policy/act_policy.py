@@ -1,8 +1,6 @@
 import torch.nn as nn
 from torch.nn import functional as F
 import torchvision.transforms as transforms
-import torch
-import numpy as np
 
 from models import build_ACT_model_and_optimizer
 
@@ -32,7 +30,7 @@ class ACTPolicy(nn.Module):
 
             all_l1 = F.l1_loss(actions, a_hat, reduction='none')
             l1 = (all_l1 * ~is_pad.unsqueeze(-1)).mean()
-            total_kld, dim_wise_kld, mean_kld = kl_divergence(mu, logvar)
+            total_kld, _, _ = kl_divergence(mu, logvar)
             loss = l1 + total_kld[0] * self.kl_weight
             
             return loss

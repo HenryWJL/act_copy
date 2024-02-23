@@ -1,16 +1,39 @@
 import torch
-import torch.nn.functional as F
 import torchvision
 from torch import nn
+from torch import Tensor
 from torchvision.models._utils import IntermediateLayerGetter
-from typing import Dict, List
-from util.misc import NestedTensor, is_main_process
-from collections import OrderedDict
+from typing import Optional, List
 
 from .position_encoding import build_position_encoding
 
 import IPython
 e = IPython.embed
+
+
+class NestedTensor(object):
+    def __init__(self, tensors, mask: Optional[Tensor]):
+        self.tensors = tensors
+        self.mask = mask
+
+
+    def to(self, device):
+        cast_tensor = self.tensors.to(device)
+        mask = self.mask
+        if mask is not None:
+            assert mask is not None
+            cast_mask = mask.to(device)
+        else:
+            cast_mask = None
+        return NestedTensor(cast_tensor, cast_mask)
+
+
+    def decompose(self):
+        return self.tensors, self.mask
+
+
+    def __repr__(self):
+        return str(self.tensors)
 
 
 class FrozenBatchNorm2d(torch.nn.Module):
@@ -81,7 +104,7 @@ class Backbone(BackboneBase):
                  dilation: bool):
         backbone = getattr(torchvision.models, name)(
             replace_stride_with_dilation=[False, False, dilation],
-            pretrained=is_main_process(), norm_layer=FrozenBatchNorm2d) # pretrained # TODO do we want frozen batch_norm??
+            pretrained=True, norm_layer=FrozenBatchNorm2d)
         num_channels = 512 if name in ('resnet18', 'resnet34') else 2048
         super().__init__(backbone, train_backbone, num_channels, return_interm_layers)
 

@@ -1,9 +1,8 @@
 import copy
-from typing import Optional, List
-
 import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
+from typing import Optional
 
 import IPython
 e = IPython.embed

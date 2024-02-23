@@ -1,8 +1,8 @@
-import numpy as np
-import torch
 import os
-from glob import glob
 import h5py
+import torch
+import numpy as np
+from glob import glob
 from torch.utils.data import Dataset, DataLoader
 
 from .normalize import get_norm_stats

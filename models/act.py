@@ -122,7 +122,7 @@ class ACT(nn.Module):
         
         a_hat = self.action_head(hs)
         
-        return a_hat, [mu, logvar], probs, binaries
+        return a_hat, (mu, logvar)
     
     
     def encode(self, qpos, actions=None, is_pad=None):

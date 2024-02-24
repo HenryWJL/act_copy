@@ -150,11 +150,9 @@ class ACT(nn.Module):
                 # get 1D sinusoidal position embedding
                 pos_embed = self.pos_table.clone().detach()
                 pos_embed = pos_embed.permute(1, 0, 2)  # (2+seq, 1, hidden_dim)
-                ###============ ??? ============###
-                # do not mask cls token
-                cls_joint_is_pad = torch.full((bs, 2), False).to(qpos.device) # False: not a padding
+                # do not mask [CLS] and qpos tokens
+                cls_joint_is_pad = torch.full((bs, 2), False).to(qpos.device)  # False: not a padding
                 is_pad = torch.cat([cls_joint_is_pad, is_pad], axis=1)  # (bs, 2+seq)
-                ###============ ??? ============###
                 # query the model
                 encoder_output = self.encoder(encoder_input, pos=pos_embed, src_key_padding_mask=is_pad)
                 # get latent z

@@ -39,14 +39,13 @@ def train(args):
     
     train_dataloader, norm_stats = load_data(args)
     policy = ACTPolicy(args).to(device)
-    optimizer = policy.configure_optimizers().to(device)
+    optimizer = policy.configure_optimizers()
     print("Training")
     for epoch in tqdm(range(args.epoch)):
-        policy.train()
         optimizer.zero_grad()
-        for batch_idx, (image, qpos, action) in enumerate(train_dataloader):
-            image, qpos, action = image.to(device), qpos.to(device), action.to(device)
-            loss = policy(qpos, image, action)
+        for batch_idx, (image, qpos, action, is_pad) in enumerate(train_dataloader):
+            image, qpos, action, is_pad = image.to(device), qpos.to(device), action.to(device), is_pad.to(device)
+            loss = policy(qpos, image, action, is_pad)
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()

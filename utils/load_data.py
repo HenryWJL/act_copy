@@ -23,7 +23,7 @@ class ACTDataset(Dataset):
 
 
     def __getitem__(self, idx):
-        return self.image_data[idx], self.qpos_data[idx], self.action_data[idx], self.is_pad_data[idx]
+        return self.image_data[idx], self.qpos_data[idx], self.action_seq_data[idx], self.is_pad_data[idx]
 
 
     def __len__(self):
@@ -52,8 +52,6 @@ class ACTDataset(Dataset):
                         image_decode = cv2.imdecode(image[i], 1)
                         images_decode.append(image_decode)
                     images[idx] = np.stack(images_decode, axis=0)        
-                # normalize images pixel intensity to [0, 1] (if necessary)
-                image = image / 255.0
                 # concatenate images
                 image = np.stack(images, axis=1)  # (time_steps, num_camera, h, w, c)
                 # normalize actions and joint positions
@@ -63,12 +61,14 @@ class ACTDataset(Dataset):
                 zero_pad = np.zeros((self.num_queries - 1, action.shape[1]), dtype=np.float32)
                 action = np.concatenate([action, zero_pad], axis=0)
                 is_pad = np.zeros(action.shape[0])
-                is_pad[time_steps: ] = 1
+                is_pad[time_steps: ] = 1  # define where sequences of zero padding are
                 # transform nd.array to torch.tensor
                 image = torch.from_numpy(image).permute(0, 1, 4, 2, 3)  # (time_steps, num_camera, c, h, w)
                 qpos = torch.from_numpy(qpos).float()
                 action = torch.from_numpy(action).float()
                 is_pad = torch.from_numpy(is_pad).bool()
+                # normalize images pixel intensity to [0, 1] (if necessary)
+                image = image / 255.0
                 ### TODO we want the idx to be like [[0, 1, 2...seq-1], [1, 2, 3...seq], [2, 3, 4...seq+1]] (step, seq)
                 idx = torch.randint(2, (time_steps, self.num_queries))
                 action_seq = action[idx, :]  # (time_steps, num_queries, dim)

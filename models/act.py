@@ -32,7 +32,7 @@ def get_sinusoid_encoding_table(n_position, d_hid):
 class ACT(nn.Module):
 
   
-    def __init__(self, backbones, transformer, encoder, state_dim, action_dim, num_queries, latent_dim, camera_names):
+    def __init__(self, backbone, transformer, encoder, state_dim, action_dim, num_queries, latent_dim, camera_names):
         """ACT model, a variant of DERT VAE model
         Params:
         
@@ -80,8 +80,8 @@ class ACT(nn.Module):
         self.input_proj_robot_state = nn.Linear(state_dim, hidden_dim)  # project joint positions to proprio embedding
         self.latent_out_proj = nn.Linear(self.latent_dim, hidden_dim)  # project latent z to latent embedding
         self.additional_pos_embed = nn.Embedding(2, hidden_dim)  # additional learned position embedding for proprio and latent embeddings
-        self.backbones = nn.ModuleList(backbones)
-        self.input_proj = nn.Conv2d(backbones[0].num_channels, hidden_dim, kernel_size=1)  # project backbone's image features to embedding
+        self.backbones = nn.ModuleList([backbone for i in range(len(camera_names))])
+        self.input_proj = nn.Conv2d(self.backbones[0].num_channels, hidden_dim, kernel_size=1)  # project backbone's image features to embedding
         self.query_embed = nn.Embedding(num_queries, hidden_dim)  # learned position embedding of Transformer decoder's query
         
         
@@ -199,16 +199,13 @@ def build_ACT_model_and_optimizer(args):
         encoder = None
     else:
         encoder = build_encoder(args)
-    # Build visual encoder for each image observation (camera view)  
-    backbones = []
-    for _ in args.camera_names:
-        backbone = build_backbone(args)
-        backbones.append(backbone)
+    # Build visual encoder backbone  
+    backbone = build_backbone(args)    
     # Build VAE decoder
     transformer = build_transformer(args)
     # Build ACT model
     model = ACT(
-        backbones=backbones,
+        backbone=backbone,
         transformer=transformer,
         encoder=encoder,
         state_dim=args.state_dim,

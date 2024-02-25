@@ -69,8 +69,8 @@ class ACTDataset(Dataset):
                 is_pad = torch.from_numpy(is_pad).bool()
                 # normalize images pixel intensity to [0, 1] (if necessary)
                 image = image / 255.0
-                ### TODO we want the idx to be like [[0, 1, 2...seq-1], [1, 2, 3...seq], [2, 3, 4...seq+1]] (step, seq)
-                idx = torch.randint(2, (time_steps, self.num_queries))
+                ### idx (time_steps, num_queries): [[0, 1, 2...seq-1], [1, 2, 3...seq], [2, 3, 4...seq+1],...]
+                idx = torch.stack([torch.arange(i, i + self.num_queries) for i in range(time_steps)], dim=0)
                 action_seq = action[idx, :]  # (time_steps, num_queries, dim)
                 
                 total_image.append(image)

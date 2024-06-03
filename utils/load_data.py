@@ -250,6 +250,12 @@ def load_data(args):
     norm_stats = get_norm_stats(args)
     # Construct dataset and dataloader
     dataset = ACTDataset(args, norm_stats)
-    dataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True, pin_memory=True, num_workers=8, prefetch_factor=1)
-   
+    dataloader = DataLoader(
+        dataset,
+        batch_size=args.batch,
+        shuffle=True,
+        pin_memory=True,
+        num_workers=8,
+        prefetch_factor=1
+    )
     return dataloader, norm_stats

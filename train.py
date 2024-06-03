@@ -25,7 +25,13 @@ def make_parser():
         help="Directory used for loading training data."
     )
     parser.add_argument(
-        "--ckpt_dir",
+        "--checkpoint",
+        type=str,
+        default="./experiments/seed_52_horizon_10_lr_0.0005_kl_10.0/checkpoints/epoch_1000.pth",
+        help="Directory used for loading pretrained models."
+    )
+    parser.add_argument(
+        "--save_dir",
         type=str,
         default="./experiments",
         help="Directory used for saving models."
@@ -48,9 +54,24 @@ def train_one_epoch(dataloader, policy, optimizer, device):
 
 
 def train(args):
+    torch.cuda.empty_cache()
+    # get device
+    torch.cuda.set_device(4)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')    
+    # load checkpoints (if any)
+    ckpt = None
+    if args.checkpoint is not None:
+        dataset_dir = args.dataset_dir
+        save_dir = args.save_dir
+        epoch = args.epoch
+        ckpt = torch.load(args.checkpoint)
+        args = ckpt["args"]
+        args.dataset_dir = dataset_dir
+        args.save_dir = save_dir
+        args.epoch = epoch
     # create saving directory
     save_dir = os.path.join(
-        args.ckpt_dir,
+        save_dir,
         f'seed_{args.seed}_horizon_{args.action_horizon}_lr_{args.lr}_kl_{args.kl_weight}'
     )
     if not os.path.exists(save_dir):
@@ -59,11 +80,8 @@ def train(args):
     # create logger
     log_path = os.path.join(save_dir, "log.txt")
     logger = Logger(log_path)
-    # get device
+    # set seed
     set_seed(args.seed)
-    torch.cuda.empty_cache()
-    torch.cuda.set_device(4)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')    
     logger.dump(f"seed: {args.seed}, device: {device}")
     # load data
     logger.dump("Loading Data...")
@@ -72,13 +90,18 @@ def train(args):
     logger.dump("Getting Policy...")
     policy = ACTPolicy(args).to(device)
     optimizer = policy.configure_optimizers()
+    if ckpt is not None:
+        policy.model.load_state_dict(ckpt["model"])
+        optimizer.load_state_dict(ckpt["optimizer"])
     logger.dump(f"Number of parameters: {policy.model.__repr__()}")
     # train
     logger.dump("Training...")
     policy.train()
-    for epoch in tqdm(range(args.epoch)):
+    start_epoch = (ckpt["epoch"] + 1) if ckpt is not None else 0
+    assert start_epoch < args.epoch
+    for epoch in tqdm(range(start_epoch, args.epoch)):
         loss = train_one_epoch(train_dataloader, policy, optimizer, device)
-        logger.dump(f"In epoch[{epoch + 1}, args.epoch], the loss is: {loss}")
+        logger.dump(f"In epoch[{epoch + 1}, {args.epoch}], the loss is: {loss}")
         if (epoch + 1) % args.save_epochs == 0:
             save_path = os.path.join(save_dir, "checkpoints", f'epoch_{epoch + 1}.pth')
             torch.save(

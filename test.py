@@ -19,7 +19,7 @@ def make_parser():
     parser.add_argument(
         "--checkpoint",
         type=str,
-        default="./experiment/seed_52_horizon_10_lr_0.0005_kl_10.0/checkpoints/epoch_1000.pth",
+        default="./experiments/seed_52_horizon_10_lr_0.0005_kl_10.0/checkpoints/epoch_1000.pth",
         help="Checkpoint path."
     )
     return parser
@@ -27,12 +27,13 @@ def make_parser():
 
 @torch.no_grad()
 def test(checkpoint: str, image: torch.Tensor, qpos: torch.Tensor) -> torch.Tensor:
+    torch.cuda.empty_cache()
     # load checkpoint
     ckpt = torch.load(checkpoint)
     train_args = ckpt["args"]
-    # get device
+    # set seed
     set_seed(train_args.seed)
-    torch.cuda.empty_cache()
+    # get device
     torch.cuda.set_device(4)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # instantiate policy
@@ -44,6 +45,7 @@ def test(checkpoint: str, image: torch.Tensor, qpos: torch.Tensor) -> torch.Tens
     policy.eval()
     image, qpos = image.to(device), qpos.to(device)
     action_pred = policy(qpos, image)
+    action_pred = action_pred.cpu()
     # unnormalize actions
     action_pred = action_pred * norm_stats["action_std"] + norm_stats["action_mean"]
     return action_pred
@@ -56,7 +58,6 @@ def main(argv=sys.argv[1:]):
     image = torch.rand(1, 1, 3, 480, 640)
     qpos = torch.rand(1, 7)
     action_pred = test(checkpoint, image, qpos)
-    print(action_pred)
     
     
 if __name__ == '__main__':

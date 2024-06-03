@@ -2,26 +2,28 @@
 "backbone" = "resnet18"
 "lr_backbone" = 1e-5
 "no_encoder" = 0
-"state_dim" = 14
-"action_dim" = 14
-"num_queries" = 100
+"state_dim" = 7
+"action_dim" = 7
+"action_horizon" = 10
 "latent_dim" = 32
 "hidden_dim" = 256
 "nheads" = 8
-"dim_feedforward" = 2048
+"dim_feedforward" = 1024
 "enc_layers" = 4
 "dec_layers" = 7
 "dropout" = 0.1
-"pre_norm" = 0
+"pre_norm" = 1
 
 [train]
+"seed" = 52
+"batch" = 10
+"epoch" = 1000
 "kl_weight" = 10
-"lr" = 1e-4
+"lr" = 5e-4
 "weight_decay" = 1e-4
-"batch" = 100
-"epoch" = 2000
-"seed" = 42
-"device" = "cpu"
+"save_epochs" = 100
 
-[io]
-"camera_names" = ['cam_high', 'cam_left_wrist', 'cam_right_wrist']
+[dataset]
+"cameras" = ['head_camera']
+"full_episode" = 0
+"norm_mode" = "mean_std"

@@ -16,22 +16,19 @@ def reparametrize(mu, logvar):
     eps = Variable(std.data.new(std.size()).normal_())
     return mu + std * eps
 
-
 def get_sinusoid_encoding_table(n_position, d_hid):
     """1D sinusoidal positional encoding"""
     def get_position_angle_vec(position):
         return [position / np.power(10000, 2 * (hid_j // 2) / d_hid) for hid_j in range(d_hid)]
-
+    
     sinusoid_table = np.array([get_position_angle_vec(pos_i) for pos_i in range(n_position)])
     sinusoid_table[:, 0::2] = np.sin(sinusoid_table[:, 0::2])  # dim 2i
     sinusoid_table[:, 1::2] = np.cos(sinusoid_table[:, 1::2])  # dim 2i+1
-
     return torch.FloatTensor(sinusoid_table).unsqueeze(0)
 
 
 class ACT(nn.Module):
 
-  
     def __init__(self, backbone, transformer, encoder, state_dim, action_dim, num_queries, latent_dim, camera_names):
         """ACT model, a variant of DERT VAE model
         Params:
@@ -62,7 +59,6 @@ class ACT(nn.Module):
         self.latent_dim = latent_dim
         hidden_dim = transformer.d_model
         self.action_head = nn.Linear(hidden_dim, action_dim)
-        
         # VAE encoder
         self.cls_embed = nn.Embedding(1, hidden_dim)  # extra [CLS] token embedding
         self.encoder_action_proj = nn.Linear(action_dim, hidden_dim) # project action sequence to embedding
@@ -75,7 +71,6 @@ class ACT(nn.Module):
         be fixed during back propagation
         """
         self.register_buffer('pos_table', get_sinusoid_encoding_table(1+1+num_queries, hidden_dim)) # [CLS], joint_pos, action_seq
-        
         # VAE decoder
         self.input_proj_robot_state = nn.Linear(state_dim, hidden_dim)  # project joint positions to proprio embedding
         self.latent_out_proj = nn.Linear(self.latent_dim, hidden_dim)  # project latent z to latent embedding
@@ -83,7 +78,6 @@ class ACT(nn.Module):
         self.backbones = nn.ModuleList([backbone for i in range(len(camera_names))])
         self.input_proj = nn.Conv2d(self.backbones[0].num_channels, hidden_dim, kernel_size=1)  # project backbone's image features to embedding
         self.query_embed = nn.Embedding(num_queries, hidden_dim)  # learned position embedding of Transformer decoder's query
-        
         
     def forward(self, qpos, image, actions=None, is_pad=None):
         """
@@ -98,14 +92,14 @@ class ACT(nn.Module):
         """
         ### VAE encoder
         latent_input, mu, logvar = self.encode(qpos, actions, is_pad)
-
         ### VAE decoder
         # Image observation features and their position embeddings
         all_cam_features = []
         all_cam_pos = []
-        for cam_id, cam_name in enumerate(self.camera_names):
+        for cam_id,_ in enumerate(self.camera_names):
             features, pos = self.backbones[cam_id](image[:, cam_id])
-            ### If "return_interm_layers" is set to True, the backbone will return features from intermediate layers
+            # If "return_interm_layers" is set to True, the backbone 
+            # will return features from intermediate layers
             features = features[0]  # take the feature from the last layer
             pos = pos[0]  # take the pos from the last layer
             all_cam_features.append(self.input_proj(features))
@@ -115,28 +109,29 @@ class ACT(nn.Module):
         # fold camera dimension into width dimension
         src = torch.cat(all_cam_features, axis=3)
         pos = torch.cat(all_cam_pos, axis=3)
-        
-        hs = self.transformer(src, None, self.query_embed.weight, pos, latent_input, proprio_input, self.additional_pos_embed.weight)[0]
-        
+        hs = self.transformer(
+            src,
+            None,
+            self.query_embed.weight,
+            pos,
+            latent_input,
+            proprio_input,
+            self.additional_pos_embed.weight
+        )[0]
         a_hat = self.action_head(hs)
-        
         return a_hat, (mu, logvar)
-    
     
     def encode(self, qpos, actions=None, is_pad=None):
         """Obtain latent z and project it to embedding"""
         bs, _ = qpos.shape
-        
         ### Inference
         if self.encoder is None:
             mu = logvar = None
             latent_sample = torch.zeros([bs, self.latent_dim], dtype=torch.float32).to(qpos.device)
-            latent_input = self.latent_out_proj(latent_sample)
-            
+            latent_input = self.latent_out_proj(latent_sample)  
         ### Training or validation
         else:
             is_training = actions is not None
-            
             ### Training
             if is_training:
                 # get input embedding
@@ -163,15 +158,16 @@ class ACT(nn.Module):
                 latent_sample = reparametrize(mu, logvar)
                 # get latent z embedding
                 latent_input = self.latent_out_proj(latent_sample)
-                
             ### Validation
             else:
                 mu = logvar = None
                 latent_sample = torch.zeros([bs, self.latent_dim], dtype=torch.float32).to(qpos.device)
                 latent_input = self.latent_out_proj(latent_sample)
-
         return latent_input, mu, logvar
-
+    
+    def __repr__(self):
+        n_parameters = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        return n_parameters / 1e6
 
 def build_encoder(args):
     """Build VAE encoder"""
@@ -182,14 +178,21 @@ def build_encoder(args):
     num_encoder_layers = args.enc_layers
     normalize_before = args.pre_norm
     activation = "relu"
-
-    encoder_layer = TransformerEncoderLayer(d_model, nhead, dim_feedforward,
-                                            dropout, activation, normalize_before)
+    encoder_layer = TransformerEncoderLayer(
+        d_model,
+        nhead,
+        dim_feedforward,
+        dropout,
+        activation,
+        normalize_before
+    )
     encoder_norm = nn.LayerNorm(d_model) if normalize_before else None
-    encoder = TransformerEncoder(encoder_layer, num_encoder_layers, encoder_norm)
-
+    encoder = TransformerEncoder(
+        encoder_layer,
+        num_encoder_layers,
+        encoder_norm
+    )
     return encoder
-
 
 def build_ACT_model_and_optimizer(args):
     # Build VAE encoder
@@ -208,12 +211,10 @@ def build_ACT_model_and_optimizer(args):
         encoder=encoder,
         state_dim=args.state_dim,
         action_dim=args.action_dim,
-        num_queries=args.num_queries,
+        num_queries=args.action_horizon,
         latent_dim = args.latent_dim,
-        camera_names=args.camera_names
+        camera_names=args.cameras
     )
-    n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print("number of parameters: %.2fM" % (n_parameters/1e6,))
     # Build optimizer
     param_dicts = [
         {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
@@ -222,7 +223,9 @@ def build_ACT_model_and_optimizer(args):
             "lr": args.lr_backbone,
         },
     ]
-    optimizer = torch.optim.AdamW(param_dicts, lr=args.lr,
-                                  weight_decay=args.weight_decay)
-
+    optimizer = torch.optim.AdamW(
+        param_dicts,
+        lr=args.lr,
+        weight_decay=args.weight_decay
+    )
     return model, optimizer

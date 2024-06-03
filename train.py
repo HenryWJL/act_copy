@@ -27,7 +27,7 @@ def make_parser():
     parser.add_argument(
         "--checkpoint",
         type=str,
-        default="./experiments/seed_52_horizon_10_lr_0.0005_kl_10.0/checkpoints/epoch_1000.pth",
+        default=None,
         help="Directory used for loading pretrained models."
     )
     parser.add_argument(
@@ -71,7 +71,7 @@ def train(args):
         args.epoch = epoch
     # create saving directory
     save_dir = os.path.join(
-        save_dir,
+        args.save_dir,
         f'seed_{args.seed}_horizon_{args.action_horizon}_lr_{args.lr}_kl_{args.kl_weight}'
     )
     if not os.path.exists(save_dir):

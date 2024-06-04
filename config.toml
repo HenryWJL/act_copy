@@ -15,11 +15,11 @@
 "pre_norm" = 1
 
 [train]
-"seed" = 52
+"seed" = 42
 "batch" = 10
-"epoch" = 1000
+"epoch" = 2000
 "kl_weight" = 10
-"lr" = 7e-4
+"lr" = 7e-5
 "weight_decay" = 1e-4
 "save_epochs" = 100
 

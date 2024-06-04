@@ -64,7 +64,7 @@ def train(args):
         dataset_dir = args.dataset_dir
         save_dir = args.save_dir
         epoch = args.epoch
-        ckpt = torch.load(args.checkpoint)
+        ckpt = torch.load(args.checkpoint, map_location=device)
         args = ckpt["args"]
         args.dataset_dir = dataset_dir
         args.save_dir = save_dir

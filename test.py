@@ -28,14 +28,13 @@ def make_parser():
 @torch.no_grad()
 def test(checkpoint: str, image: torch.Tensor, qpos: torch.Tensor) -> torch.Tensor:
     torch.cuda.empty_cache()
+    # get device
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # load checkpoint
-    ckpt = torch.load(checkpoint)
+    ckpt = torch.load(checkpoint, map_location=device)
     train_args = ckpt["args"]
     # set seed
     set_seed(train_args.seed)
-    # get device
-    torch.cuda.set_device(4)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # instantiate policy
     policy = ACTPolicy(train_args).to(device)
     policy.model.load_state_dict(ckpt["model"])

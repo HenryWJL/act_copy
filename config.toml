@@ -17,11 +17,11 @@
 [train]
 "seed" = 42
 "batch" = 10
-"epoch" = 2000
+"epoch" = 5000
 "kl_weight" = 10
-"lr" = 7e-5
+"lr" = 5e-5
 "weight_decay" = 1e-4
-"save_epochs" = 100
+"save_epochs" = 1000
 
 [dataset]
 "cameras" = ['head_camera']

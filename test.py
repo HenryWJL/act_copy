@@ -56,6 +56,7 @@ def main(argv=sys.argv[1:]):
     checkpoint = args.checkpoint
     image = torch.rand(1, 1, 3, 480, 640)
     qpos = torch.rand(1, 7)
+    # remember to normalize qpos and images ([0, 1])
     action_pred = test(checkpoint, image, qpos)
     
     

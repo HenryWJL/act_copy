@@ -25,7 +25,9 @@ class Collector:
         self.save_dir = save_dir
         self.images = list()
         self.joint_poses = list()
+        self.ee_poses = list()
         self.collecting = False
+        self.cnt = 0
         # ROS initialization
         rospy.init_node("collect_data", anonymous=True)
         self.image_sub = Subscriber(topics["image_topic"], Image)
@@ -56,48 +58,58 @@ class Collector:
     def on_press(self, key) -> None:
         try:
             if hasattr(key, "char") and key.char:
-                if key.char == "s":
-                    self.start_collection()
+                if key.char == "r":
+                    self.resume()
+                elif key.char == "p":
+                    self.pause()
+                elif key.char == "s":
+                    self.save()
                 elif key.char == "e":
-                    self.stop_collection()
+                    self.exit()
+                else:
+                    rospy.logwarn(f"Invalid command {key.char}.")
         except AttributeError:
-            rospy.logwarn(f"Invalid command {key.char}!")
             pass
     
-    def start(self):
+    def resume(self):
         if not self.collecting:
             rospy.loginfo("Start collecting data")
+            self.images = list()
+            self.joint_poses = list()
+            self.ee_poses = list()
             self.collecting = True
         else:
             rospy.logwarn("Data is being collected!")    
     
     def pause(self):
         if self.collecting:
-            rospy.loginfo("Pause")
             self.collecting = False
+            rospy.loginfo("Pause")
+        else:
+            rospy.logwarn("The process is already paused.")
             
     def save(self):
         if not self.collecting:
-            
-            
-    def stop(self):
-        if self.collecting:
-            rospy.loginfo('Stop data collection.')
-            self.collecting = False
-            if self.image_sub:
-                self.image_sub.unregister()
-            if self.joint_sub:
-                self.joint_sub.unregister()
+            save_path = self.save_dir.joinpath(f"episode_{self.cnt}.hdf5")
             images = np.array(self.images)
             joint_poses = np.array(self.joint_poses)
-            # save data.
-            self.writer['/observations/qpos'] = joint_poses
-            self.writer['/observations/images/head_camera'] = images
-            self.writer['/action'] = joint_poses
-            self.writer.close()
-            rospy.loginfo('Data saved.')
-
-
+            with h5py.File(str(save_path), "w") as f:
+                f["/obs/head_camera"] = images
+                f["/proprios"] = joint_poses
+                f.close()
+            rospy.loginfo("Data saved")
+        else:
+            rospy.logwarn("Please pause before saving data.")
+            
+    def exit(self):
+        self.collecting = False
+        if self.image_sub:
+            self.image_sub.unregister()
+        if self.joint_sub:
+            self.joint_sub.unregister()
+        rospy.loginfo("Successfully exit.")
+        
+                
 @click.command("Collect full episodes using Kinova Gen3 Lite.")
 @click.option("-s", "--save_dir", type=str, default="data", help="Directory used for saving collected data.")
 

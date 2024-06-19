@@ -21,13 +21,13 @@ def make_parser():
     parser.add_argument(
         "--dataset_dir",
         type=str,
-        default="./data/cup_place",
+        default="",
         help="Directory used for loading training data."
     )
     parser.add_argument(
         "--checkpoint",
         type=str,
-        default="/home/wangjunlin/project/act_pytorch/experiments/seed_42_horizon_10_lr_5e-05_kl_10.0/checkpoints/epoch_2000.pth",
+        default=None,
         help="Directory used for loading pretrained models."
     )
     parser.add_argument(

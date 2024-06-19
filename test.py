@@ -19,7 +19,7 @@ def make_parser():
     parser.add_argument(
         "--checkpoint",
         type=str,
-        default="./experiments/seed_52_horizon_10_lr_0.0005_kl_10.0/checkpoints/epoch_1000.pth",
+        default="",
         help="Checkpoint path."
     )
     return parser
@@ -40,6 +40,8 @@ def test(checkpoint: str, image: torch.Tensor, qpos: torch.Tensor) -> torch.Tens
     policy.model.load_state_dict(ckpt["model"])
     # get norm status
     norm_stats = ckpt["norm_stats"]
+    # normalize qpos
+    qpos = (qpos - norm_stats["qpos_mean"]) / norm_stats["qpos_std"]
     # inference
     policy.eval()
     image, qpos = image.to(device), qpos.to(device)
@@ -56,26 +58,8 @@ def main(argv=sys.argv[1:]):
     checkpoint = args.checkpoint
     image = torch.rand(1, 1, 3, 480, 640)
     qpos = torch.rand(1, 7)
-    # remember to normalize qpos and images ([0, 1])
     action_pred = test(checkpoint, image, qpos)
     
     
 if __name__ == '__main__':
     main()
-
-
-# a_hat = None
-# norm_dict = None
-# # unnormalize the actions
-# if "max" in norm_dict["action"].keys():
-#     a_max = norm_dict["action"]["max"]
-#     a_max = torch.from_numpy(a_max).float().detach()[None,...]
-#     a_hat = a_hat * a_max
-# elif "mean" in norm_dict["action"].keys():
-#     a_mean = norm_dict["action"]["mean"]
-#     a_std = norm_dict["action"]["std"]
-#     a_mean = torch.from_numpy(a_mean).float().detach()[None,...]
-#     a_std = torch.from_numpy(a_std).float().detach()[None,...]
-#     a_hat = a_hat * a_std + a_mean
-
-

@@ -1,6 +1,4 @@
-This is a PyTorch implementation of the imitation learning algorithm ACT proposed in _Learning Fine-Grained Bimanual Manipulation with Low-Cost Hardware_. 
-- **Original codebase:** [act](https://github.com/tonyzhaozh/act).
-- **Paper:** [here](https://arxiv.org/abs/2304.13705).
+This is the PyTorch implementation of [_Learning Fine-Grained Bimanual Manipulation with Low-Cost Hardware_](https://arxiv.org/abs/2304.13705). Code in this repository is copied from the [official codebase](https://github.com/tonyzhaozh/act) and simplified such that minimal requirements are demanded. Also, sufficient annotations are added to help readers better understand the algorithm.
 
 ## Usage
 ### 1. Collect human demonstrations.

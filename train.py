@@ -6,8 +6,9 @@ import argparse
 import tomli
 import torch
 from tqdm import tqdm
-from utils import Logger, load_data, set_seed
-from policy import ACTPolicy
+from act_pytorch.utils.train_utils import Logger, set_seed
+from act_pytorch.utils.load_data import load_data
+from act_pytorch.policies.act_policy import ACTPolicy
 
 import IPython
 e = IPython.embed
@@ -119,7 +120,7 @@ def train(args):
 def main(argv=sys.argv[1:]):
     parser = make_parser()
     args = parser.parse_args(argv)
-    with open('config.toml', 'rb') as f:
+    with open('configs/basic.toml', 'rb') as f:
         _config = tomli.load(f)
         # dataset
         args.cameras = list(_config['dataset']['cameras'])
